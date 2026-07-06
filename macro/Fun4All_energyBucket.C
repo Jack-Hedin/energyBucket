@@ -4,6 +4,20 @@
 #include <fun4all/SubsysReco.h>
 
 
+// I copied this from the rtrk one, I dont know which of these I actually need
+
+#include <fun4all/Fun4AllUtils.h>
+#include <fun4all/Fun4AllOutputManager.h>
+#include <fun4all/Fun4AllRunNodeInputManager.h>
+#include <fun4all/Fun4AllDstInputManager.h>
+#include <fun4all/Fun4AllInputManager.h>
+#include <fun4all/Fun4AllServer.h>
+#include <fun4all/SubsysReco.h>
+#include <fun4all/Fun4AllDstOutputManager.h>
+#include <fun4all/Fun4AllOutputManager.h>
+
+
+
 #include <TSystem.h>
 
 // #include <energyBucket/energyBucket.h>
@@ -12,6 +26,23 @@
 // R__LOAD_LIBRARY(libenergyBucket.so)
 
 R__LOAD_LIBRARY(libfun4all.so)
+
+//I also copied this 
+
+
+R__LOAD_LIBRARY(libjetbase.so)
+R__LOAD_LIBRARY(libjetbackground.so)
+R__LOAD_LIBRARY(libcalo_reco.so)
+R__LOAD_LIBRARY(libffamodules.so)
+
+R__LOAD_LIBRARY(libg4centrality.so)
+R__LOAD_LIBRARY(libg4dst.so)
+R__LOAD_LIBRARY(libjetbase.so)
+R__LOAD_LIBRARY(libg4jets.so)
+R__LOAD_LIBRARY(libtrack_reco.so)
+
+
+
 
 
 void Fun4All_energyBucket() {
@@ -29,14 +60,8 @@ void Fun4All_energyBucket() {
   se->registerInputManager(in0);
 
 
-  
   se->run(1);
 
-
+ 
   
-  std::cout << "Test" << std::endl;
-  
-  
-  se->End();
-  gSystem->Exit(1);
 }
