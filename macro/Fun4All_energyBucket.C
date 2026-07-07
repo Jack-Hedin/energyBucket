@@ -20,10 +20,9 @@
 
 #include <TSystem.h>
 
-// #include <energyBucket/energyBucket.h>
-
-
-// R__LOAD_LIBRARY(libenergyBucket.so)
+// My two modules
+#include <energybucket/energyBucket.h>
+R__LOAD_LIBRARY(libenergyBucket.so)
 
 R__LOAD_LIBRARY(libfun4all.so)
 
@@ -45,7 +44,7 @@ R__LOAD_LIBRARY(libtrack_reco.so)
 
 
 
-void Fun4All_energyBucket() {
+void Fun4All_energyBucket(int should_exit = 1) {
   //this is the location of the list I want to use
   const string &inputFile1 = "dst_calo_cluster.list";
 
@@ -60,8 +59,15 @@ void Fun4All_energyBucket() {
   se->registerInputManager(in0);
 
 
+  energyBucket *myEB = new energyBucket("energyBucket");
+  se->registerSubsystem(myEB);
+
+  //Run some number of events, 0 to run all in the list
   se->run(1);
 
- 
-  
+
+  //exits if you want it to, defaults to yes
+  if (should_exit == 1) {
+gSystem->Exit(0);
+  }
 }

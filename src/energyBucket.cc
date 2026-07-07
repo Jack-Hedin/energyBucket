@@ -97,7 +97,7 @@ int energyBucket::InitRun([[maybe_unused]] PHCompositeNode *topNode)
 }
 
 //____________________________________________________________________________..
-int energyBucket::process_event(PHCompositeNode *topNode)
+int energyBucket::process_event([[maybe_unused]] PHCompositeNode *topNode)
 {
   std::cout << "Haiiii" << std::endl;
   return Fun4AllReturnCodes::EVENT_OK;
