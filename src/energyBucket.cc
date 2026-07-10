@@ -69,10 +69,16 @@
 
 #include <phool/PHCompositeNode.h>
 
+//all of these are my own additions
 #include <calobase/TowerInfoContainer.h>
 #include <calobase/TowerInfo.h>
+#include <calobase/RawTowerGeomContainer.h>
 #include <phool/getClass.h>
 
+//histograms
+#include <TH3.h>
+
+//just to cout
 #include <iostream>
 
 //____________________________________________________________________________..
@@ -89,9 +95,16 @@ energyBucket::~energyBucket()
 }
 
 //____________________________________________________________________________..
-int energyBucket::Init([[maybe_unused]] PHCompositeNode *topNode)
+int energyBucket::Init([[maybe_unused]]PHCompositeNode *topNode)
 {
   std::cout << "energyBucket::Init(PHCompositeNode *topNode) Initializing" << std::endl;
+  
+  //pretty much ripped from tutorials/CaloDataRun24pp
+  //out = new TFile(Outfile.c_str(), RECREATE);
+
+  //not using yet
+  //h_OHCalTowE = new TH3F("OHCal_Energy", "outer hcal tower eta, tower phi, tower energy", 24, -0.5, 23.5, 64, -0.5, 63.5, 100, -10, 25); 
+
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
@@ -105,14 +118,33 @@ int energyBucket::InitRun([[maybe_unused]] PHCompositeNode *topNode)
 //____________________________________________________________________________..
 int energyBucket::process_event(PHCompositeNode *topNode)
 {
-  int channel = 0;
+  
+  //This is the node for the uncalibrated hcal towers
   TowerInfoContainer *towersOHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALOUT");
-  TowerInfo *leTower = towersOHC->get_tower_at_channel(channel);
-  unsigned int towerKey = towersOHC->encode_key(channel);
+    if (!towersOHC)
+  {
+  std::cout << "Hey! theres no TowerInfoContainer here!" << std::endl;
+  return Fun4AllReturnCodes::ABORTRUN;
+  }  
+
+  //so we can get the tower positions 
+  RawTowerGeomContainer *geomOHC = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALOUT");
+  if (!geomOHC) {
+    std::cout << "No Geometry???" << std::endl;
+    return Fun4AllReturnCodes::ABORTRUN;
+  }
+  
+  
+  for (unsigned int channel = 0; channel < towersOHC->size();channel++){
+  
+    TowerInfo *leTower = towersOHC->get_tower_at_channel(channel);
+    unsigned int towerKey = towersOHC->encode_key(channel);
   
 
-  std::cout << "The tower located at Phi = " << towersOHC->getTowerPhiBin(towerKey) << " and at Eta = " << towersOHC->getTowerEtaBin(towerKey) << 
-  ", has and energy of " << leTower->get_energy() << std::endl << ":3 :3 :3" << std::endl;
+  std::cout << "The tower located at Phi = " << geomOHC->get_phicenter(towersOHC->getTowerPhiBin(towerKey))
+	    << " and at Eta = " << geomOHC->get_etacenter(towersOHC->getTowerEtaBin(towerKey)) << 
+  ", has and energy of " << leTower->get_energy() << " GeV :3 :3 :3" << std::endl;
+  }
   return Fun4AllReturnCodes::EVENT_OK;
 }
 

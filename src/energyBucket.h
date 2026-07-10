@@ -4,10 +4,11 @@
 #define ENERGYBUCKET_H
 
 #include <fun4all/SubsysReco.h>
-
+#include <calobase/RawTowerGeomContainer.h>
 #include <string>
 
 class PHCompositeNode;
+class RawTowerGeomConatiner;
 
 class energyBucket : public SubsysReco
 {
