@@ -59,12 +59,12 @@ void Fun4All_energyBucket(int should_exit = 1) {
   se->registerInputManager(in0);
 
 
-  energyBucket *myEB = new energyBucket("energyBucket");
+  energyBucket *myEB = new energyBucket("energyBucket.root");
   se->registerSubsystem(myEB);
 
   //Run some number of events, 0 to run all in the list
   se->run(1);
-
+  se->End();
 
   //exits if you want it to, defaults to yes
   if (should_exit == 1) {

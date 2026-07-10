@@ -4,11 +4,13 @@
 #define ENERGYBUCKET_H
 
 #include <fun4all/SubsysReco.h>
-#include <calobase/RawTowerGeomContainer.h>
 #include <string>
+#include <cstring>
 
 class PHCompositeNode;
-class RawTowerGeomConatiner;
+class TProfile2D;
+class TFile;
+
 
 class energyBucket : public SubsysReco
 {
@@ -52,6 +54,13 @@ class energyBucket : public SubsysReco
   void Print(const std::string &what = "ALL") const override;
 
  private:
+
+  TFile *out{nullptr};
+
+
+
+  TProfile2D *h_OHCalE = nullptr;
+  std::string Outfile{"commissioning.root"};
 };
 
 #endif // ENERGYBUCKET_H

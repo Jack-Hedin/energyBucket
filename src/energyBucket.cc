@@ -75,15 +75,17 @@
 #include <calobase/RawTowerGeomContainer.h>
 #include <phool/getClass.h>
 
-//histograms
-#include <TH3.h>
+//histograms/graphs
+#include <TProfile2D.h>
+#include <TFile.h>
 
 //just to cout
 #include <iostream>
 
 //____________________________________________________________________________..
 energyBucket::energyBucket(const std::string &name):
- SubsysReco(name)
+ SubsysReco("Energy_Buckets")
+ , Outfile(name)
 {
   std::cout << "energyBucket::energyBucket(const std::string &name) Calling ctor" << std::endl;
 }
@@ -98,12 +100,13 @@ energyBucket::~energyBucket()
 int energyBucket::Init([[maybe_unused]]PHCompositeNode *topNode)
 {
   std::cout << "energyBucket::Init(PHCompositeNode *topNode) Initializing" << std::endl;
-  
-  //pretty much ripped from tutorials/CaloDataRun24pp
-  //out = new TFile(Outfile.c_str(), RECREATE);
 
-  //not using yet
-  //h_OHCalTowE = new TH3F("OHCal_Energy", "outer hcal tower eta, tower phi, tower energy", 24, -0.5, 23.5, 64, -0.5, 63.5, 100, -10, 25); 
+  //in large part taken from the tutorials/CaloDataRun24pp/ ana files
+  delete out; 
+  out = new TFile(Outfile.c_str(), "RECREATE");
+
+  //name, title, Nbins, min, max, (x3)
+  h_OHCalE = new TProfile2D("OHCalE", "Measured Energy in OHCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.16, -10, 90); 
 
   return Fun4AllReturnCodes::EVENT_OK;
 }
@@ -140,10 +143,11 @@ int energyBucket::process_event(PHCompositeNode *topNode)
     TowerInfo *leTower = towersOHC->get_tower_at_channel(channel);
     unsigned int towerKey = towersOHC->encode_key(channel);
   
+    h_OHCalE->Fill(geomOHC->get_etacenter(towersOHC->getTowerEtaBin(towerKey)), geomOHC->get_phicenter(towersOHC->getTowerPhiBin(towerKey)), leTower->get_energy());
 
-  std::cout << "The tower located at Phi = " << geomOHC->get_phicenter(towersOHC->getTowerPhiBin(towerKey))
-	    << " and at Eta = " << geomOHC->get_etacenter(towersOHC->getTowerEtaBin(towerKey)) << 
-  ", has and energy of " << leTower->get_energy() << " GeV :3 :3 :3" << std::endl;
+  //std::cout << "The tower located at Phi = " << geomOHC->get_phicenter(towersOHC->getTowerPhiBin(towerKey))
+  // 	      << " and at Eta = " << geomOHC->get_etacenter(towersOHC->getTowerEtaBin(towerKey)) 
+  // 	      << ", has and energy of " << leTower->get_energy() << " GeV :3 :3 :3" << std::endl;
   }
   return Fun4AllReturnCodes::EVENT_OK;
 }
@@ -158,6 +162,16 @@ int energyBucket::ResetEvent([[maybe_unused]] PHCompositeNode *topNode)
 //____________________________________________________________________________..
 int energyBucket::EndRun(const int runnumber)
 {
+  out->cd();
+  
+  
+  h_OHCalE->Write();
+  
+  
+  out->Close();
+  delete out;
+
+
   std::cout << "energyBucket::EndRun(const int runnumber) Ending Run for Run " << runnumber << std::endl;
   return Fun4AllReturnCodes::EVENT_OK;
 }
