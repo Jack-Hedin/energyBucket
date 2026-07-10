@@ -69,6 +69,12 @@
 
 #include <phool/PHCompositeNode.h>
 
+#include <calobase/TowerInfoContainer.h>
+#include <calobase/TowerInfo.h>
+#include <phool/getClass.h>
+
+#include <iostream>
+
 //____________________________________________________________________________..
 energyBucket::energyBucket(const std::string &name):
  SubsysReco(name)
@@ -97,9 +103,16 @@ int energyBucket::InitRun([[maybe_unused]] PHCompositeNode *topNode)
 }
 
 //____________________________________________________________________________..
-int energyBucket::process_event([[maybe_unused]] PHCompositeNode *topNode)
+int energyBucket::process_event(PHCompositeNode *topNode)
 {
-  std::cout << "Haiiii" << ":3 :3 :3" << std::endl;
+  int channel = 0;
+  TowerInfoContainer *towersOHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALOUT");
+  TowerInfo *leTower = towersOHC->get_tower_at_channel(channel);
+  unsigned int towerKey = towersOHC->encode_key(channel);
+  
+
+  std::cout << "The tower located at Phi = " << towersOHC->getTowerPhiBin(towerKey) << " and at Eta = " << towersOHC->getTowerEtaBin(towerKey) << 
+  ", has and energy of " << leTower->get_energy() << std::endl << ":3 :3 :3" << std::endl;
   return Fun4AllReturnCodes::EVENT_OK;
 }
 

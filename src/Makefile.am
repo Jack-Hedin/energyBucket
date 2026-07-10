@@ -21,7 +21,12 @@ libenergyBucket_la_SOURCES = \
 
 libenergyBucket_la_LIBADD = \
   -lphool \
-  -lSubsysReco
+  -lSubsysReco \
+  -ltrack_io \
+  -ltrack_reco \
+  -ljetbase \
+  -lcalotrigger \
+  -ljetbackground
 
 BUILT_SOURCES = testexternals.cc
 

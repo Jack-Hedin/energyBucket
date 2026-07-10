@@ -16,7 +16,7 @@
 
 
 
-VPATH = /sphenix/u/jackhedin/energyBucket/src
+VPATH = ..
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
     false; \
@@ -295,9 +295,9 @@ SHELL = /bin/sh
 STRIP = strip
 VERSION = 1.00
 abs_builddir = /sphenix/u/jackhedin/energyBucket/src/build
-abs_srcdir = /sphenix/u/jackhedin/energyBucket/src
+abs_srcdir = /sphenix/u/jackhedin/energyBucket/src/build/..
 abs_top_builddir = /sphenix/u/jackhedin/energyBucket/src/build
-abs_top_srcdir = /sphenix/u/jackhedin/energyBucket/src
+abs_top_srcdir = /sphenix/u/jackhedin/energyBucket/src/build/..
 ac_ct_AR = ar
 ac_ct_CC = /cvmfs/sphenix.sdcc.bnl.gov/alma9.2-gcc-14.2.0/opt/sphenix/core/gcc/14.2.0-2f0a0/x86_64-el9/bin/gcc
 ac_ct_CXX = 
@@ -342,12 +342,12 @@ psdir = ${docdir}
 runstatedir = ${localstatedir}/run
 sbindir = ${exec_prefix}/sbin
 sharedstatedir = ${prefix}/com
-srcdir = /sphenix/u/jackhedin/energyBucket/src
+srcdir = ..
 sysconfdir = ${prefix}/etc
 target_alias = 
 top_build_prefix = 
 top_builddir = .
-top_srcdir = /sphenix/u/jackhedin/energyBucket/src
+top_srcdir = ..
 AUTOMAKE_OPTIONS = foreign
 AM_CPPFLAGS = \
   -I$(includedir) \
@@ -370,7 +370,12 @@ libenergyBucket_la_SOURCES = \
 
 libenergyBucket_la_LIBADD = \
   -lphool \
-  -lSubsysReco
+  -lSubsysReco \
+  -ltrack_io \
+  -ltrack_reco \
+  -ljetbase \
+  -lcalotrigger \
+  -ljetbackground
 
 BUILT_SOURCES = testexternals.cc
 testexternals_SOURCES = testexternals.cc

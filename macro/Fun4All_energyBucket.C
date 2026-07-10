@@ -63,7 +63,7 @@ void Fun4All_energyBucket(int should_exit = 1) {
   se->registerSubsystem(myEB);
 
   //Run some number of events, 0 to run all in the list
-  se->run(2);
+  se->run(1);
 
 
   //exits if you want it to, defaults to yes
