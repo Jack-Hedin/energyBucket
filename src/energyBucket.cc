@@ -106,7 +106,7 @@ int energyBucket::Init([[maybe_unused]]PHCompositeNode *topNode)
   out = new TFile(Outfile.c_str(), "RECREATE");
 
   //name, title, Nbins, min, max, (x3)
-  h_OHCalE = new TProfile2D("OHCalE", "Measured Energy in OHCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.16, -10, 90); 
+  h_OHCalE = new TProfile2D("OHCalE", "Measured Energy in OHCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90); 
 
   return Fun4AllReturnCodes::EVENT_OK;
 }
