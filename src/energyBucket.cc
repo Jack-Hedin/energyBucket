@@ -105,8 +105,14 @@ int energyBucket::Init([[maybe_unused]]PHCompositeNode *topNode)
   delete out; 
   out = new TFile(Outfile.c_str(), "RECREATE");
 
+
+  //For each graph stated here, it must also be stated in the header file to carry over
   //name, title, Nbins, min, max, (x3)
   h_OHCalE = new TProfile2D("OHCalE", "Measured Energy in OHCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90); 
+  
+  h_IHCalE = new TProfile2D("INCalE", "Measured Energy in INCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90);
+
+
 
   return Fun4AllReturnCodes::EVENT_OK;
 }
@@ -122,33 +128,73 @@ int energyBucket::InitRun([[maybe_unused]] PHCompositeNode *topNode)
 int energyBucket::process_event(PHCompositeNode *topNode)
 {
   
-  //This is the node for the uncalibrated hcal towers
+  //Grab both outer and Inner HCAL nodes
   TowerInfoContainer *towersOHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALOUT");
-    if (!towersOHC)
-  {
-  std::cout << "Hey! theres no TowerInfoContainer here!" << std::endl;
-  return Fun4AllReturnCodes::ABORTRUN;
+  TowerInfoContainer *towersIHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALIN");  
+  
+  //Check if either was missing
+  if (!towersOHC) {
+    std::cout << "Hey! theres no HCALOUT towers here!" << std::endl;
+    return Fun4AllReturnCodes::ABORTRUN;
   }  
-
-  //so we can get the tower positions 
-  RawTowerGeomContainer *geomOHC = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALOUT");
-  if (!geomOHC) {
-    std::cout << "No Geometry???" << std::endl;
+  if (!towersIHC) {
+    std::cout << "Hey! theres no HCALIN towers here!" << std::endl;
     return Fun4AllReturnCodes::ABORTRUN;
   }
   
   
-  for (unsigned int channel = 0; channel < towersOHC->size();channel++){
   
+  //Grab the Geometry data of the towers 
+  RawTowerGeomContainer *geomOHC = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALOUT");
+  RawTowerGeomContainer *geomIHC = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALIN");
+  
+  //Check if either was missing
+  if (!geomOHC) {
+    std::cout << "No OUTCAL Geometry???" << std::endl;
+    return Fun4AllReturnCodes::ABORTRUN;
+  }
+  if (!geomIHC) {
+    std::cout << "No INCAL Geometry???" << std::endl;
+    return Fun4AllReturnCodes::ABORTRUN;
+  }
+  
+
+  //loops over ever channel in the outer hcal. 
+  for (unsigned int channel = 0; channel < towersOHC->size();channel++){
+    
+    //access the tower at each channel, the key lets us access the geometric data
     TowerInfo *leTower = towersOHC->get_tower_at_channel(channel);
     unsigned int towerKey = towersOHC->encode_key(channel);
   
-    h_OHCalE->Fill(geomOHC->get_etacenter(towersOHC->getTowerEtaBin(towerKey)), geomOHC->get_phicenter(towersOHC->getTowerPhiBin(towerKey)), leTower->get_energy());
+    //graph her
+    h_OHCalE->Fill(geomOHC->get_etacenter(towersOHC->getTowerEtaBin(towerKey)),
+		   geomOHC->get_phicenter(towersOHC->getTowerPhiBin(towerKey)),
+		   leTower->get_energy());
+  }
+  
+    //Same thing but for the inner hcal. Technically could have had this be the same loop because its the name amount in both
+    //but I really dont care, its neater this way
+  for (unsigned int channel = 0; channel < towersIHC->size();channel++){
 
+    //access the tower at each channel, the key lets us access the geometric data
+    TowerInfo *leTower = towersIHC->get_tower_at_channel(channel);
+    unsigned int towerKey = towersIHC->encode_key(channel);
+
+    //graph her
+    h_IHCalE->Fill(geomIHC->get_etacenter(towersIHC->getTowerEtaBin(towerKey)),
+		   geomIHC->get_phicenter(towersIHC->getTowerPhiBin(towerKey)),
+		   leTower->get_energy());
+  }
+
+
+
+
+
+  //legacy code to print it if I wanted to (to have inside the for loop)
   //std::cout << "The tower located at Phi = " << geomOHC->get_phicenter(towersOHC->getTowerPhiBin(towerKey))
   // 	      << " and at Eta = " << geomOHC->get_etacenter(towersOHC->getTowerEtaBin(towerKey)) 
-  // 	      << ", has and energy of " << leTower->get_energy() << " GeV :3 :3 :3" << std::endl;
-  }
+  // 	      << ", has and energy of " << leTower->get_energy() << " GeV :3 :3 :3" << std::endl; 
+  
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
@@ -166,7 +212,7 @@ int energyBucket::EndRun(const int runnumber)
   
   
   h_OHCalE->Write();
-  
+  h_IHCalE->Write();  
   
   out->Close();
   delete out;

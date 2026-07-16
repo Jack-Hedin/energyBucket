@@ -58,8 +58,8 @@ class energyBucket : public SubsysReco
   TFile *out{nullptr};
 
 
-
   TProfile2D *h_OHCalE = nullptr;
+  TProfile2D *h_IHCalE = nullptr;
   std::string Outfile{"commissioning.root"};
 };
 
