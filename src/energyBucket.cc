@@ -1,68 +1,3 @@
-//____________________________________________________________________________..
-//
-// This is a template for a Fun4All SubsysReco module with all methods from the
-// $OFFLINE_MAIN/include/fun4all/SubsysReco.h baseclass
-// You do not have to implement all of them, you can just remove unused methods
-// here and in energyBucket.h.
-//
-// energyBucket(const std::string &name = "energyBucket")
-// everything is keyed to energyBucket, duplicate names do work but it makes
-// e.g. finding culprits in logs difficult or getting a pointer to the module
-// from the command line
-//
-// energyBucket::~energyBucket()
-// this is called when the Fun4AllServer is deleted at the end of running. Be
-// mindful what you delete - you do loose ownership of object you put on the node tree
-//
-// int energyBucket::Init(PHCompositeNode *topNode)
-// This method is called when the module is registered with the Fun4AllServer. You
-// can create historgrams here or put objects on the node tree but be aware that
-// modules which haven't been registered yet did not put antyhing on the node tree
-//
-// int energyBucket::InitRun(PHCompositeNode *topNode)
-// This method is called when the first event is read (or generated). At
-// this point the run number is known (which is mainly interesting for raw data
-// processing). Also all objects are on the node tree in case your module's action
-// depends on what else is around. Last chance to put nodes under the DST Node
-// We mix events during readback if branches are added after the first event
-//
-// int energyBucket::process_event(PHCompositeNode *topNode)
-// called for every event. Return codes trigger actions, you find them in
-// $OFFLINE_MAIN/include/fun4all/Fun4AllReturnCodes.h
-//   everything is good:
-//     return Fun4AllReturnCodes::EVENT_OK
-//   abort event reconstruction, clear everything and process next event:
-//     return Fun4AllReturnCodes::ABORT_EVENT; 
-//   proceed but do not save this event in output (needs output manager setting):
-//     return Fun4AllReturnCodes::DISCARD_EVENT; 
-//   abort processing:
-//     return Fun4AllReturnCodes::ABORT_RUN
-// all other integers will lead to an error and abort of processing
-//
-// int energyBucket::ResetEvent(PHCompositeNode *topNode)
-// If you have internal data structures (arrays, stl containers) which needs clearing
-// after each event, this is the place to do that. The nodes under the DST node are cleared
-// by the framework
-//
-// int energyBucket::EndRun(const int runnumber)
-// This method is called at the end of a run when an event from a new run is
-// encountered. Useful when analyzing multiple runs (raw data). Also called at
-// the end of processing (before the End() method)
-//
-// int energyBucket::End(PHCompositeNode *topNode)
-// This is called at the end of processing. It needs to be called by the macro
-// by Fun4AllServer::End(), so do not forget this in your macro
-//
-// int energyBucket::Reset(PHCompositeNode *topNode)
-// not really used - it is called before the dtor is called
-//
-// void energyBucket::Print(const std::string &what) const
-// Called from the command line - useful to print information when you need it
-//
-// [[maybe_unused]] suppresses compiler warnings if topNode is not used in this method
-//
-//____________________________________________________________________________..
-
 #include "energyBucket.h"
 
 #include <fun4all/Fun4AllReturnCodes.h>
@@ -74,6 +9,7 @@
 #include <calobase/TowerInfo.h>
 #include <calobase/RawTowerGeomContainer.h>
 #include <phool/getClass.h>
+#include <fun4all/PHTFileServer.h>
 
 //histograms/graphs
 #include <TProfile2D.h>
@@ -85,7 +21,7 @@
 //____________________________________________________________________________..
 energyBucket::energyBucket(const std::string &name):
  SubsysReco("Energy_Buckets")
- , Outfile(name)
+ , m_outfile(name)
 {
   std::cout << "energyBucket::energyBucket(const std::string &name) Calling ctor" << std::endl;
 }
@@ -101,18 +37,20 @@ int energyBucket::Init([[maybe_unused]]PHCompositeNode *topNode)
 {
   std::cout << "energyBucket::Init(PHCompositeNode *topNode) Initializing" << std::endl;
 
-  //in large part taken from the tutorials/CaloDataRun24pp/ ana files
-  delete out; 
-  out = new TFile(Outfile.c_str(), "RECREATE");
-
+   
+  PHTFileServer::get().open(m_outfile, "RECREATE");
 
   //For each graph stated here, it must also be stated in the header file to carry over
   //name, title, Nbins, min, max, (x3)
-  h_OHCalE = new TProfile2D("OHCalE", "Measured Energy in OHCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90); 
-  
-  h_IHCalE = new TProfile2D("INCalE", "Measured Energy in INCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90);
+  h_OHCalE = new TProfile2D("Raw Outer HCalE", "Measured Energy in OHCal;eta;phi;E (ADS)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90); 
+ 
+  h_OHCalE_calib = new TProfile2D("Calibrated Outer HCalE", "Measured Energy in OHCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90);
 
 
+
+  h_IHCalE = new TProfile2D("IHCalE", "Measured Energy in Inner HCal;eta;phi;E (ADS)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90);
+
+  h_IHCalE_calib = new TProfile2D("Calibrated Inner HCalE", "Measured Energy in IHCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90);
 
   return Fun4AllReturnCodes::EVENT_OK;
 }
@@ -128,10 +66,17 @@ int energyBucket::InitRun([[maybe_unused]] PHCompositeNode *topNode)
 int energyBucket::process_event(PHCompositeNode *topNode)
 {
   
-  //Grab both outer and Inner HCAL nodes
+  //Grabbing all the nodes we need
   TowerInfoContainer *towersOHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALOUT");
   TowerInfoContainer *towersIHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALIN");  
   
+
+  TowerInfoContainer *towersOHC_C = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_HCALOUT");
+  TowerInfoContainer *towersIHC_C = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_HCALIN");
+
+
+
+
   //Check if either was missing
   if (!towersOHC) {
     std::cout << "Hey! theres no HCALOUT towers here!" << std::endl;
@@ -186,7 +131,39 @@ int energyBucket::process_event(PHCompositeNode *topNode)
 		   leTower->get_energy());
   }
 
+  // ==========================================================================
+  // Calibrated Tower Processing
+  // ==========================================================================
 
+  // Check if calibrated containers are missing
+  if (!towersOHC_C) {
+    std::cout << "Hey! theres no HCALOUT_CALIB towers here?" << std::endl;
+    return Fun4AllReturnCodes::ABORTRUN;
+  }
+  if (!towersIHC_C) {
+    std::cout << "Hey! theres no HCALOUT_CALIB towers here?" << std::endl;
+    return Fun4AllReturnCodes::ABORTRUN;
+  }
+
+  // Loop over every channel in the calibrated outer hcal
+  for (unsigned int channel = 0; channel < towersOHC_C->size(); channel++) {
+    TowerInfo *leTowerCalib = towersOHC_C->get_tower_at_channel(channel);
+    unsigned int towerKey = towersOHC_C->encode_key(channel);
+
+    h_OHCalE_calib->Fill(geomOHC->get_etacenter(towersOHC_C->getTowerEtaBin(towerKey)),
+                         geomOHC->get_phicenter(towersOHC_C->getTowerPhiBin(towerKey)),
+                         leTowerCalib->get_energy());
+  }
+
+  // Loop over every channel in the calibrated inner hcal
+  for (unsigned int channel = 0; channel < towersIHC_C->size(); channel++) {
+    TowerInfo *leTowerCalib = towersIHC_C->get_tower_at_channel(channel);
+    unsigned int towerKey = towersIHC_C->encode_key(channel);
+
+    h_IHCalE_calib->Fill(geomIHC->get_etacenter(towersIHC_C->getTowerEtaBin(towerKey)),
+                         geomIHC->get_phicenter(towersIHC_C->getTowerPhiBin(towerKey)),
+                         leTowerCalib->get_energy());
+  }  
 
 
 
@@ -208,15 +185,16 @@ int energyBucket::ResetEvent([[maybe_unused]] PHCompositeNode *topNode)
 //____________________________________________________________________________..
 int energyBucket::EndRun(const int runnumber)
 {
-  out->cd();
+  TFile fout(m_outfile.c_str(), "RECREATE");
   
-  
+  //****************
   h_OHCalE->Write();
   h_IHCalE->Write();  
-  
-  out->Close();
-  delete out;
+  h_OHCalE_calib->Write();
+  h_IHCalE_calib->Write();
+  //****************
 
+  fout.Close();
 
   std::cout << "energyBucket::EndRun(const int runnumber) Ending Run for Run " << runnumber << std::endl;
   return Fun4AllReturnCodes::EVENT_OK;

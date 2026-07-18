@@ -55,12 +55,14 @@ class energyBucket : public SubsysReco
 
  private:
 
-  TFile *out{nullptr};
-
-
+ 
   TProfile2D *h_OHCalE = nullptr;
+  TProfile2D *h_OHCalE_calib = nullptr;
+
   TProfile2D *h_IHCalE = nullptr;
-  std::string Outfile{"commissioning.root"};
+  TProfile2D *h_IHCalE_calib = nullptr;
+ 
+  std::string m_outfile{"commissioning.root"};
 };
 
 #endif // ENERGYBUCKET_H
