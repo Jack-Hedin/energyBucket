@@ -42,15 +42,15 @@ int energyBucket::Init([[maybe_unused]]PHCompositeNode *topNode)
 
   //For each graph stated here, it must also be stated in the header file to carry over
   //name, title, Nbins, min, max, (x3)
-  h_OHCalE = new TProfile2D("Raw Outer HCalE", "Measured Energy in OHCal;eta;phi;E (ADS)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90); 
- 
-  h_OHCalE_calib = new TProfile2D("Calibrated Outer HCalE", "Measured Energy in OHCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90);
+  h_OHCalE = new TProfile2D("Raw Outer HCalE", "Measured Energy in OHCal;eta;phi;E (ADS)", 24, -1.06, 1.06, 64, 0, 6.3, -10, 90);  
+  h_OHCalE_calib = new TProfile2D("Calibrated Outer HCalE", "Measured Energy in OHCal;eta;phi;E (GeV)", 24, -1.06, 1.06, 64, 0, 6.3, -10, 90);
 
+  h_IHCalE = new TProfile2D("IHCalE", "Measured Energy in Inner HCal;eta;phi;E (ADS)", 24, -1.06, 1.06, 64, 0, 6.3, -10, 90);
+  h_IHCalE_calib = new TProfile2D("Calibrated Inner HCalE", "Measured Energy in IHCal;eta;phi;E (GeV)", 24, -1.06, 1.06, 64, 0, 6.3, -10, 90);
 
+  h_CEMCE = new TProfile2D("CEMCE", "Measured Energy in EMCal;eta;phi;E (ADS)", 94, -1.12, 1.12, 254, -0.09, 6.2, -10, 90);
+  h_CEMCE_calib = new TProfile2D("Calibrated CEMCE", "Measured Energy in EMCal;eta;phi;E (GeV)", 94, -1.12, 1.12, 254, -0.09, 6.2, -10, 90);
 
-  h_IHCalE = new TProfile2D("IHCalE", "Measured Energy in Inner HCal;eta;phi;E (ADS)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90);
-
-  h_IHCalE_calib = new TProfile2D("Calibrated Inner HCalE", "Measured Energy in IHCal;eta;phi;E (GeV)", 24, -1.1, 1.1, 64, 0, 6.3, -10, 90);
 
   return Fun4AllReturnCodes::EVENT_OK;
 }
@@ -68,110 +68,63 @@ int energyBucket::process_event(PHCompositeNode *topNode)
   
   //Grabbing all the nodes we need
   TowerInfoContainer *towersOHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALOUT");
-  TowerInfoContainer *towersIHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALIN");  
+  TowerInfoContainer *towersIHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALIN");   
+  TowerInfoContainer *towersCEMC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_CEMC");
   
 
-  TowerInfoContainer *towersOHC_C = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_HCALOUT");
+  TowerInfoContainer *towersOHC_C = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_HCALOUT"); 
   TowerInfoContainer *towersIHC_C = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_HCALIN");
-
-
-
-
-  //Check if either was missing
-  if (!towersOHC) {
-    std::cout << "Hey! theres no HCALOUT towers here!" << std::endl;
-    return Fun4AllReturnCodes::ABORTRUN;
-  }  
-  if (!towersIHC) {
-    std::cout << "Hey! theres no HCALIN towers here!" << std::endl;
-    return Fun4AllReturnCodes::ABORTRUN;
-  }
+  TowerInfoContainer *towersCEMC_C = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_CEMC"); 
   
-  
-  
-  //Grab the Geometry data of the towers 
+
   RawTowerGeomContainer *geomOHC = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALOUT");
   RawTowerGeomContainer *geomIHC = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALIN");
+  RawTowerGeomContainer *geomCEMC = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_CEMC");
+
+
+  // Comprehensive safety checks upfront
+  if (!towersOHC)   { std::cout << "Missing HCALOUT towers!" << std::endl; return Fun4AllReturnCodes::ABORTRUN; }
+  if (!towersIHC)   { std::cout << "Missing HCALIN towers!" << std::endl;  return Fun4AllReturnCodes::ABORTRUN; }
+  if (!towersOHC_C) { std::cout << "Missing Calibrated HCALOUT towers!" << std::endl; return Fun4AllReturnCodes::ABORTRUN; }
+  if (!towersIHC_C) { std::cout << "Missing Calibrated HCALIN towers!" << std::endl;  return Fun4AllReturnCodes::ABORTRUN; }
+  if (!geomOHC)     { std::cout << "Missing OUTCAL Geometry!" << std::endl; return Fun4AllReturnCodes::ABORTRUN; }
+  if (!geomIHC)     { std::cout << "Missing INCAL Geometry!" << std::endl;  return Fun4AllReturnCodes::ABORTRUN; }
+
   
-  //Check if either was missing
-  if (!geomOHC) {
-    std::cout << "No OUTCAL Geometry???" << std::endl;
-    return Fun4AllReturnCodes::ABORTRUN;
-  }
-  if (!geomIHC) {
-    std::cout << "No INCAL Geometry???" << std::endl;
-    return Fun4AllReturnCodes::ABORTRUN;
-  }
-  
+  // Define a local structure to bundle the related objects together
+  struct CaloLoopConfig {
+    TowerInfoContainer* container;
+    RawTowerGeomContainer* geometry;
+    TProfile2D* histogram;
+  };
 
-  //loops over ever channel in the outer hcal. 
-  for (unsigned int channel = 0; channel < towersOHC->size();channel++){
-    
-    //access the tower at each channel, the key lets us access the geometric data
-    TowerInfo *leTower = towersOHC->get_tower_at_channel(channel);
-    unsigned int towerKey = towersOHC->encode_key(channel);
-  
-    //graph her
-    h_OHCalE->Fill(geomOHC->get_etacenter(towersOHC->getTowerEtaBin(towerKey)),
-		   geomOHC->get_phicenter(towersOHC->getTowerPhiBin(towerKey)),
-		   leTower->get_energy());
-  }
-  
-    //Same thing but for the inner hcal. Technically could have had this be the same loop because its the name amount in both
-    //but I really dont care, its neater this way
-  for (unsigned int channel = 0; channel < towersIHC->size();channel++){
+  // yurt
+  CaloLoopConfig configs[] = {
+    {towersOHC,   geomOHC, h_OHCalE},
+    {towersIHC,   geomIHC, h_IHCalE},
+    {towersOHC_C, geomOHC, h_OHCalE_calib},
+    {towersIHC_C, geomIHC, h_IHCalE_calib},
+    {towersCEMC,  geomCEMC, h_CEMCE},
+    {towersCEMC_C,geomCEMC, h_CEMCE_calib}
+  };
 
-    //access the tower at each channel, the key lets us access the geometric data
-    TowerInfo *leTower = towersIHC->get_tower_at_channel(channel);
-    unsigned int towerKey = towersIHC->encode_key(channel);
 
-    //graph her
-    h_IHCalE->Fill(geomIHC->get_etacenter(towersIHC->getTowerEtaBin(towerKey)),
-		   geomIHC->get_phicenter(towersIHC->getTowerPhiBin(towerKey)),
-		   leTower->get_energy());
+  // Run everything through a single unified loop block
+  for (const auto& config : configs) {
+
+    for (unsigned int channel = 0; channel < config.container->size(); channel++) {
+      TowerInfo *leTower = config.container->get_tower_at_channel(channel);
+      unsigned int towerKey = config.container->encode_key(channel);
+           
+
+      config.histogram->Fill(
+        config.geometry->get_etacenter(config.container->getTowerEtaBin(towerKey)),
+        config.geometry->get_phicenter(config.container->getTowerPhiBin(towerKey)),
+        leTower->get_energy()
+      );
+    }
   }
 
-  // ==========================================================================
-  // Calibrated Tower Processing
-  // ==========================================================================
-
-  // Check if calibrated containers are missing
-  if (!towersOHC_C) {
-    std::cout << "Hey! theres no HCALOUT_CALIB towers here?" << std::endl;
-    return Fun4AllReturnCodes::ABORTRUN;
-  }
-  if (!towersIHC_C) {
-    std::cout << "Hey! theres no HCALOUT_CALIB towers here?" << std::endl;
-    return Fun4AllReturnCodes::ABORTRUN;
-  }
-
-  // Loop over every channel in the calibrated outer hcal
-  for (unsigned int channel = 0; channel < towersOHC_C->size(); channel++) {
-    TowerInfo *leTowerCalib = towersOHC_C->get_tower_at_channel(channel);
-    unsigned int towerKey = towersOHC_C->encode_key(channel);
-
-    h_OHCalE_calib->Fill(geomOHC->get_etacenter(towersOHC_C->getTowerEtaBin(towerKey)),
-                         geomOHC->get_phicenter(towersOHC_C->getTowerPhiBin(towerKey)),
-                         leTowerCalib->get_energy());
-  }
-
-  // Loop over every channel in the calibrated inner hcal
-  for (unsigned int channel = 0; channel < towersIHC_C->size(); channel++) {
-    TowerInfo *leTowerCalib = towersIHC_C->get_tower_at_channel(channel);
-    unsigned int towerKey = towersIHC_C->encode_key(channel);
-
-    h_IHCalE_calib->Fill(geomIHC->get_etacenter(towersIHC_C->getTowerEtaBin(towerKey)),
-                         geomIHC->get_phicenter(towersIHC_C->getTowerPhiBin(towerKey)),
-                         leTowerCalib->get_energy());
-  }  
-
-
-
-  //legacy code to print it if I wanted to (to have inside the for loop)
-  //std::cout << "The tower located at Phi = " << geomOHC->get_phicenter(towersOHC->getTowerPhiBin(towerKey))
-  // 	      << " and at Eta = " << geomOHC->get_etacenter(towersOHC->getTowerEtaBin(towerKey)) 
-  // 	      << ", has and energy of " << leTower->get_energy() << " GeV :3 :3 :3" << std::endl; 
-  
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
@@ -192,6 +145,8 @@ int energyBucket::EndRun(const int runnumber)
   h_IHCalE->Write();  
   h_OHCalE_calib->Write();
   h_IHCalE_calib->Write();
+  h_CEMCE->Write();
+  h_CEMCE_calib->Write();
   //****************
 
   fout.Close();

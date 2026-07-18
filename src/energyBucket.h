@@ -61,7 +61,11 @@ class energyBucket : public SubsysReco
 
   TProfile2D *h_IHCalE = nullptr;
   TProfile2D *h_IHCalE_calib = nullptr;
- 
+  
+  TProfile2D *h_CEMCE = nullptr;
+  TProfile2D *h_CEMCE_calib = nullptr;
+
+
   std::string m_outfile{"commissioning.root"};
 };
 
