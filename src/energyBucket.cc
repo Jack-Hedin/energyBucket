@@ -48,8 +48,8 @@ int energyBucket::Init([[maybe_unused]]PHCompositeNode *topNode)
   h_IHCalE = new TProfile2D("IHCalE", "Measured Energy in Inner HCal;eta;phi;E (ADS)", 24, -1.06, 1.06, 64, 0, 6.3, -10, 90);
   h_IHCalE_calib = new TProfile2D("Calibrated Inner HCalE", "Measured Energy in IHCal;eta;phi;E (GeV)", 24, -1.06, 1.06, 64, 0, 6.3, -10, 90);
 
-  h_CEMCE = new TProfile2D("CEMCE", "Measured Energy in EMCal;eta;phi;E (ADS)", 94, -1.12, 1.12, 254, -0.09, 6.2, -10, 90);
-  h_CEMCE_calib = new TProfile2D("Calibrated CEMCE", "Measured Energy in EMCal;eta;phi;E (GeV)", 94, -1.12, 1.12, 254, -0.09, 6.2, -10, 90);
+  h_CEMCE = new TProfile2D("CEMCE", "Measured Energy in EMCal;eta;phi;E (ADS)", 96, -1.111, 1.111, 256, -0.0737, 6.161, -10, 90);
+  h_CEMCE_calib = new TProfile2D("Calibrated CEMCE", "Measured Energy in EMCal;eta;phi;E (GeV)", 96, -1.111, 1.111, 256, -0.0737, 6.161, -10, 90);
 
 
   return Fun4AllReturnCodes::EVENT_OK;
@@ -111,11 +111,16 @@ int energyBucket::process_event(PHCompositeNode *topNode)
 
   // Run everything through a single unified loop block
   for (const auto& config : configs) {
+    
+    //std::cout << "===========================================ΝEW TOWER SYSTEM===============================================" << std::endl;
 
     for (unsigned int channel = 0; channel < config.container->size(); channel++) {
       TowerInfo *leTower = config.container->get_tower_at_channel(channel);
       unsigned int towerKey = config.container->encode_key(channel);
-           
+          
+      //std::cout << "Tower Eta: " << config.geometry->get_etacenter(config.container->getTowerEtaBin(towerKey)) << std::endl;
+      //std::cout << "Tower Phi: " << config.geometry->get_phicenter(config.container->getTowerPhiBin(towerKey)) << std::endl;
+
 
       config.histogram->Fill(
         config.geometry->get_etacenter(config.container->getTowerEtaBin(towerKey)),
