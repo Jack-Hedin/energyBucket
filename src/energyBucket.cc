@@ -22,6 +22,8 @@
 energyBucket::energyBucket(const std::string &name):
  SubsysReco("Energy_Buckets")
  , m_outfile(name)
+ , m_wait(1)
+ , m_eventNumber(1)
 {
   std::cout << "energyBucket::energyBucket(const std::string &name) Calling ctor" << std::endl;
 }
@@ -65,7 +67,10 @@ int energyBucket::InitRun([[maybe_unused]] PHCompositeNode *topNode)
 //____________________________________________________________________________..
 int energyBucket::process_event(PHCompositeNode *topNode)
 {
-  
+   
+  if (!(m_wait == m_eventNumber)) {return Fun4AllReturnCodes::EVENT_OK;}
+
+
   //Grabbing all the nodes we need
   TowerInfoContainer *towersOHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALOUT");
   TowerInfoContainer *towersIHC = findNode::getClass<TowerInfoContainer>(topNode, "TOWERS_HCALIN");   
@@ -141,8 +146,17 @@ int energyBucket::ResetEvent([[maybe_unused]] PHCompositeNode *topNode)
 }
 
 //____________________________________________________________________________..
-int energyBucket::EndRun(const int runnumber)
+int energyBucket::EndRun([[maybe_unused]]const int runnumber)
 {
+  return Fun4AllReturnCodes::EVENT_OK;
+}
+
+//____________________________________________________________________________..
+int energyBucket::End([[maybe_unused]] PHCompositeNode *topNode)
+{
+  std::cout << "energyBucket::End(PHCompositeNode *topNode) This is the End..." << std::endl;
+  
+  	
   TFile fout(m_outfile.c_str(), "RECREATE");
   
   //****************
@@ -156,14 +170,6 @@ int energyBucket::EndRun(const int runnumber)
 
   fout.Close();
 
-  std::cout << "energyBucket::EndRun(const int runnumber) Ending Run for Run " << runnumber << std::endl;
-  return Fun4AllReturnCodes::EVENT_OK;
-}
-
-//____________________________________________________________________________..
-int energyBucket::End([[maybe_unused]] PHCompositeNode *topNode)
-{
-  std::cout << "energyBucket::End(PHCompositeNode *topNode) This is the End..." << std::endl;
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
@@ -174,8 +180,3 @@ int energyBucket::Reset([[maybe_unused]] PHCompositeNode *topNode)
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
-//____________________________________________________________________________..
-void energyBucket::Print(const std::string &what) const
-{
-  std::cout << "energyBucket::Print(const std::string &what) const Printing info for " << what << std::endl;
-}

@@ -51,7 +51,7 @@ class energyBucket : public SubsysReco
   /// Reset
   int Reset(PHCompositeNode * /*topNode*/) override;
 
-  void Print(const std::string &what = "ALL") const override;
+  void set_wait(int wait) {m_wait = wait;}
 
  private:
 
@@ -65,8 +65,9 @@ class energyBucket : public SubsysReco
   TProfile2D *h_CEMCE = nullptr;
   TProfile2D *h_CEMCE_calib = nullptr;
 
-
   std::string m_outfile{"commissioning.root"};
+  int m_wait;
+  int m_eventNumber;
 };
 
 #endif // ENERGYBUCKET_H
